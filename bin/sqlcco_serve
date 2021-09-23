@@ -56,6 +56,34 @@ SELECT e.entity_id,
   return info;
 }
 
+function getEntityHistory (db, entity) {
+  const row = db.prepare(`
+WITH
+user_history
+AS (SELECT e.entity,
+           i.indicator,
+           json_group_array(t.target) AS json_targets
+      FROM cco_downsampled_events ds
+      JOIN cco_entities e
+           ON (e.entity_id = ds.entity_id)
+      JOIN cco_indicators i
+           ON (i.indicator_id = ds.indicator_id)
+      JOIN cco_targets t
+           ON (t.target_id = ds.target_id)
+     WHERE e.entity = ?
+     GROUP BY 1, 2
+   )
+SELECT json_group_object(indicator, json(json_targets)) AS user_history_json
+  FROM user_history
+ GROUP BY entity;
+  `).get(String(entity));
+  if (row) {
+    return JSON.parse(row.user_history_json);
+  } else {
+    return null;
+  }
+} /* getEntityHistory() */
+
 /* ========================================================================= */
 /* == ACCESSOR ============================================================= */
 /* ========================================================================= */
@@ -149,32 +177,13 @@ SELECT e.entity_id,
       }
     }
   }, async (request, reply) => {
-    let entity = request.params.entity;
+    const entity = String(request.params.entity);
 
-    /* Fetch indicators from CCO database and add as fields to index. */
-    let row = db.prepare(`
-WITH
-user_history
-AS (SELECT e.entity,
-           i.indicator,
-           json_group_array(t.target) AS json_targets
-      FROM cco_downsampled_events ds
-      JOIN cco_entities e
-           ON (e.entity_id = ds.entity_id)
-      JOIN cco_indicators i
-           ON (i.indicator_id = ds.indicator_id)
-      JOIN cco_targets t
-           ON (t.target_id = ds.target_id)
-     WHERE e.entity = ?
-     GROUP BY 1, 2
-   )
-SELECT json_group_object(indicator, json(json_targets)) AS user_history_json
-  FROM user_history
- GROUP BY entity;
-  `).get(String(entity));
-    if (row) {
-      return index.search(JSON.parse(row.user_history_json),
-        request.query.limit, request.query.normalized);
+    /* Fetch history and send it to search */
+    const history = getEntityHistory(db, entity);
+    if (history) {
+      return index.search(history, request.query.limit,
+        request.query.normalized);
     } else {
       return [];
     }
@@ -188,5 +197,6 @@ SELECT json_group_object(indicator, json(json_targets)) AS user_history_json
       process.exit(1)
     }
   });
+
 })();
 

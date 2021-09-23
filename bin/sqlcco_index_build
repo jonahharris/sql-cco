@@ -89,8 +89,7 @@ const path = require('path');
   index.optimize();
   console.log('done');
 
-  const fileName = path.join(__dirname, '..', 'data', 'fts',
-    'sqlcco.json.gz');
+  const fileName = path.join(__dirname, '..', 'data', 'fts', argv.fts);
   console.log('saving index...');
   await index.save(fileName);
   console.log('done.');
