@@ -1,0 +1,98 @@
+#!/usr/bin/env node --expose-gc --max-old-space-size=8192
+/* ========================================================================= **
+**                     ________________  _____ ____    __                    **
+**                    / ____/ ____/ __ \/ ___// __ \  / /                    **
+**                   / /   / /   / / / /\__ \/ / / / / /                     **
+**                  / /___/ /___/ /_/ /___/ / /_/ / / /___                   **
+**                  \____/\____/\____//____/\___\_\/_____/                   **
+**                                                                           **
+** ========================================================================= **
+**                   RECOMMENDER-OPTIMIZED INVERTED INDEX                    **
+** ========================================================================= **
+** SQL-Based Cross-cooccurrence Recommender System                           **
+** Copyright (C) Jonah H. Harris <jonah.harris@gmail.com>                    **
+** All Rights Reserved.                                                      **
+**                                                                           **
+** Permission to use, copy, modify, and/or distribute this software for any  **
+** purpose is subject to the terms specified in the License Agreement.       **
+** ========================================================================= */
+
+/* ========================================================================= */
+/* -- INCLUSIONS ----------------------------------------------------------- */
+/* ========================================================================= */
+
+const CCOIndex = require('../lib/ccoindex.js');
+const sqlite3 = require('better-sqlite3');
+const fs = require('fs');
+const microtime = require('microtime');
+const minimist = require('minimist');
+const path = require('path');
+
+/* ========================================================================= */
+/* == ACCESSOR ============================================================= */
+/* ========================================================================= */
+
+(async function main () {
+  const argv = minimist(process.argv.slice(2));
+  let invalidArgs = false;
+  let requiredArgs = ['fts', 'sqlite', 'entity'];
+  Object.entries(requiredArgs).forEach(entry => {
+    const [, arg] = entry;
+    if (!(arg in argv)) {
+      console.error('Argument ' + arg + ' is missing');
+      invalidArgs = true;
+    }
+  });
+  if (true === invalidArgs) {
+    process.exit(1);
+  }
+
+  const dbOptions = {};
+  const db = sqlite3(path.join(__dirname, '..', 'data', 'sqlite',
+    argv.sqlite), dbOptions);
+
+  const index = CCOIndex();
+
+  console.log('loading index...');
+  const fileName = path.join(__dirname, '..', 'data', 'fts', argv.fts);
+  await index.load(fileName);
+  console.log('done');
+
+  let results = null;
+  let t1 = null;
+  let t2 = null;
+
+  console.log(`--- USER TEST ${argv.entity}`);
+
+  /* Fetch indicators from CCO database and add as fields to index. */
+  t1 = microtime.nowDouble();
+  let stmt = db.prepare(`
+WITH
+user_history
+AS (SELECT e.entity,
+           i.indicator,
+           json_group_array(t.target) AS json_targets
+      FROM cco_downsampled_events ds
+      JOIN cco_entities e
+           ON (e.entity_id = ds.entity_id)
+      JOIN cco_indicators i
+           ON (i.indicator_id = ds.indicator_id)
+      JOIN cco_targets t
+           ON (t.target_id = ds.target_id)
+     WHERE e.entity = '${argv.entity}'
+     GROUP BY 1, 2
+   )
+SELECT json_group_object(indicator, json(json_targets)) AS user_history_json
+  FROM user_history
+ GROUP BY entity;
+`);
+  for (const row of stmt.iterate()) {
+    //t1 = microtime.nowDouble();
+    results = index.search(JSON.parse(row.user_history_json), 40, false);
+    t2 = microtime.nowDouble();
+    console.log(results);
+    console.log(t2 - t1);
+  }
+
+})();
+
