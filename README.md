@@ -36,6 +36,7 @@ Step 6. Querying the Model (via HTTP)
 $ curl -s 'http://127.0.0.1:8080/recommendation/u1?limit=20&normalized=true' | jq
 ```
 
+
 Update Entity History
 
 New user browses electronics
@@ -54,5 +55,19 @@ New user views iphone
 
 ```
 $ curl -s 'http://127.0.0.1:8080/log/u5?indicator=view&target=iphone'
+```
+
+Additional
+
+Searching the Index (via HTTP)
+
+```
+$ ./bin/sqlcco_search --sqlite sqlcco-deploy.db --fts sqlcco.json.gz --query '{"gender":"female","country":"US","language":"en","age":"21"}'
+```
+
+Searching the Index (via HTTP)
+
+```
+curl -s -H 'Content-Type: application/json' -d '{"gender":"female","country":"US","language":"en","age":"21"}' http://127.0.0.1:8080/search | jq
 ```
 

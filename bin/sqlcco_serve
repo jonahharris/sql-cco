@@ -160,6 +160,27 @@ SELECT json_group_object(indicator, json(json_targets)) AS user_history_json
     return false;
   });
 
+  fastify.post('/search', {
+    schema: {
+      query: {
+        $id: 'recommendation-parser',
+        properties: {
+          limit: {
+            type: 'number',
+            default: 20
+          },
+          normalized: {
+            type: 'boolean',
+            default: false
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    return index.search(request.body, request.query.limit,
+      request.query.normalized);
+  });
+
   fastify.get('/recommendation/:entity', {
     schema: {
       query: {
