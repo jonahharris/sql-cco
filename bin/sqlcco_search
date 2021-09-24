@@ -35,7 +35,7 @@ const path = require('path');
 (async function main () {
   const argv = minimist(process.argv.slice(2));
   let invalidArgs = false;
-  let requiredArgs = ['fts', 'sqlite', 'entity'];
+  let requiredArgs = ['fts', 'sqlite', 'query'];
   Object.entries(requiredArgs).forEach(entry => {
     const [, arg] = entry;
     if (!(arg in argv)) {
@@ -62,37 +62,14 @@ const path = require('path');
   let t1 = null;
   let t2 = null;
 
-  console.log(`--- RECOMMENDATION (${argv.entity})`);
+  console.log(`--- SEARCH (${argv.query})`);
 
   /* Fetch indicators from CCO database and add as fields to index. */
   t1 = microtime.nowDouble();
-  let stmt = db.prepare(`
-WITH
-user_history
-AS (SELECT e.entity,
-           i.indicator,
-           json_group_array(t.target) AS json_targets
-      FROM cco_downsampled_events ds
-      JOIN cco_entities e
-           ON (e.entity_id = ds.entity_id)
-      JOIN cco_indicators i
-           ON (i.indicator_id = ds.indicator_id)
-      JOIN cco_targets t
-           ON (t.target_id = ds.target_id)
-     WHERE e.entity = '${argv.entity}'
-     GROUP BY 1, 2
-   )
-SELECT json_group_object(indicator, json(json_targets)) AS user_history_json
-  FROM user_history
- GROUP BY entity;
-`);
-  for (const row of stmt.iterate()) {
-    //t1 = microtime.nowDouble();
-    results = index.search(JSON.parse(row.user_history_json), 40, false);
-    t2 = microtime.nowDouble();
-    console.log(results);
-    console.log(t2 - t1);
-  }
+  results = index.search(JSON.parse(argv.query), 40, false);
+  t2 = microtime.nowDouble();
+  console.log(results);
+  console.log(t2 - t1);
 
 })();
 
