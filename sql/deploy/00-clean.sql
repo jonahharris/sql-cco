@@ -27,6 +27,7 @@ DROP TABLE cco_cross_similarities;
 DROP TABLE cco_events;
 DROP TABLE cco_materialized_fts_entries;
 DROP TABLE cco_triangular_similarities;
+DROP TABLE cco_target_kvpairs;
 DROP TABLE raw_events;
 
 /* :vi set ts=2 et sw=2: */

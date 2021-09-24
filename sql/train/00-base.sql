@@ -52,6 +52,13 @@ CREATE TABLE cco_events (
   target                        TEXT NOT NULL,
   PRIMARY KEY (entity, indicator, target));
 
+DROP TABLE IF EXISTS cco_target_kvpairs;
+CREATE TABLE cco_target_kvpairs (
+  target                        TEXT NOT NULL,
+  attribute                     TEXT NOT NULL,
+  value                         TEXT NOT NULL,
+  PRIMARY KEY (target, attribute));
+
 DROP TABLE IF EXISTS cco_entities;
 CREATE TABLE cco_entities (
   entity_id                     INTEGER NOT NULL PRIMARY KEY,
@@ -61,6 +68,10 @@ DROP TABLE IF EXISTS cco_indicators;
 CREATE TABLE cco_indicators (
   indicator_id                  INTEGER NOT NULL PRIMARY KEY,
   indicator                     TEXT NOT NULL UNIQUE);
+
+DROP TABLE IF EXISTS cco_fields;
+CREATE TABLE cco_fields (
+  field                         TEXT NOT NULL UNIQUE);
 
 DROP TABLE IF EXISTS cco_targets;
 CREATE TABLE cco_targets (
@@ -157,6 +168,13 @@ CREATE VIEW cco_fts_entries
                        json_group_array(clcs.other_target) AS json_obj
                   FROM cco_labeled_cross_similarities clcs
                  GROUP BY 1, 2
+
+                 UNION ALL
+                SELECT ctkvp.target,
+                       ctkvp.attribute,
+                       0,
+                       json_quote(ctkvp.value) AS json_obj
+                  FROM cco_target_kvpairs ctkvp
                  ORDER BY indicator, score DESC
                )
           SELECT target,

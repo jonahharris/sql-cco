@@ -29,5 +29,12 @@ INSERT INTO cco_targets (target)
      SELECT DISTINCT target
        FROM cco_events;
 
+INSERT INTO cco_fields (field)
+     SELECT DISTINCT attribute
+       FROM cco_target_kvpairs
+      UNION ALL
+     SELECT indicator
+       FROM cco_indicators;
+
 /* :vi set ts=2 et sw=2: */
 COMMIT;

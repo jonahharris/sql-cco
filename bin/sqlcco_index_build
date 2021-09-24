@@ -54,9 +54,9 @@ const path = require('path');
   const index = CCOIndex();
 
   /* Fetch indicators from CCO database and add as fields to index. */
-  let stmt = db.prepare('SELECT indicator FROM cco_indicators');
+  let stmt = db.prepare('SELECT field FROM cco_fields');
   for (const row of stmt.iterate()) {
-    index.addField(row.indicator);
+    index.addField(row.field);
   }
 
   let missing = 0;

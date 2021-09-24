@@ -94,5 +94,18 @@ SELECT json_group_object(indicator, json(json_targets)) AS user_history_json
     console.log(t2 - t1);
   }
 
+/*
+  t1 = microtime.nowDouble();
+  console.log('generic');
+  results = index.search({
+    gender: 'female',
+    age: ['21', '22', '23', '24', '25'],
+    language: 'en'
+  }, 40, false);
+  t2 = microtime.nowDouble();
+  console.log(results);
+  console.log(t2 - t1);
+*/
+
 })();
 
